@@ -39,7 +39,7 @@ db.connection._protocol._delegateError = function (err, sequence) {
 };
 
 app.get('/', (req, res) => {
-    res.send('Hello World! This a test for TP4')
+    res.send('Hello World! This a test for TP5')
   });
   
   
@@ -54,7 +54,8 @@ app.get(`/items`, (req, res) => {
         ])
           .then((result) => {
             res.json({
-                result
+              statusCode:200,
+              result
               })
           })
           .catch((err) => {
@@ -76,7 +77,8 @@ app.get(`/items`, (req, res) => {
         ])
           .then((result) => {
             res.json({
-                result
+              statusCode:200,
+              result
               })
           })
           .catch((err) => {
@@ -102,9 +104,10 @@ app.get(`/commandewithitems/:idCommand`, (req, res) => {
     
       .then((result) => {
         res.json({
+            statusCode: 200,
             type: 'collection',
-            result,
-          })
+            items:result,
+          })       
       })
       .catch((err) => {
         if (err) {
@@ -128,6 +131,7 @@ app.get(`/commandewithitems/:idCommand`, (req, res) => {
     ])
       .then((result) => {
         res.json({
+            statusCode:200,
             type: 'resource',
             result,
             "links": {
