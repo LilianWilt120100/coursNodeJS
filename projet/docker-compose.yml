@@ -1,0 +1,181 @@
+services:
+  authentification:
+    container_name: authentification
+    image: node:lts
+    env_file: authentification/.env
+    working_dir: /usr/src/app
+    volumes:
+      - ./authentification/api:/usr/src/app
+    #command: bash -c "npm i && npm start"
+    command: npm run watch
+    depends_on:
+      - sandwich_db
+    links:
+      - sandwich_db
+    networks:
+      - lbs
+
+
+  commandes:
+    container_name: commandes
+    image: node:lts
+    ports:
+      - 3335:3000
+    env_file: commandes/.env
+    working_dir: /usr/src/app
+    volumes:
+      - ./commandes/api:/usr/src/app
+    #command: bash -c "npm i && npm start"
+    command: npm run watch
+    depends_on:
+      - sandwich_db
+    links:
+      - sandwich_db
+    networks:
+      - lbs
+
+
+  suivi_commandes:
+    container_name: suivi_commandes
+    image: node:lts
+    env_file: suivi_commandes/.env
+    working_dir: /usr/src/app
+    volumes:
+      - ./suivi_commandes/api:/usr/src/app
+    #command: bash -c "npm i && npm start"
+    command: npm run watch
+    depends_on:
+      - sandwich_db
+    links:
+      - sandwich_db
+    networks:
+      - lbs
+
+
+  api_gateway_back:
+    container_name: api_gateway_back
+    image: node:lts
+    env_file: api_gateway_back/.env
+    working_dir: /usr/src/app
+    volumes:
+      - ./api_gateway_back/api:/usr/src/app
+    ports:
+      - 3333:3000
+    #command: bash -c "npm i && npm start"
+    command: npm run watch
+    depends_on:
+      - sandwich_db
+      - authentification
+      - suivi_commandes
+    links:
+      - sandwich_db
+      - suivi_commandes
+      - authentification
+    networks:
+      - lbs
+
+
+  api_gateway_front:
+    container_name: api_gateway_front
+    image: node:lts
+    env_file: api_gateway_front/.env
+    working_dir: /usr/src/app
+    volumes:
+      - ./api_gateway_front/api:/usr/src/app
+    ports:
+      - 3334:3000
+    #command: bash -c "npm i && npm start"
+    command: npm run watch
+    depends_on:
+      - sandwich_db
+      - directus_db
+      - directus
+      - commandes
+    links:
+      - sandwich_db
+      - directus_db
+      - directus
+      - commandes
+    networks:
+      - lbs
+      - directus
+
+
+  directus_db:
+    container_name: directus_db
+    image: postgis/postgis:13-master
+    volumes:
+      - ./data/database:/var/lib/postgresql/data
+    networks:
+      - directus
+    environment:
+      POSTGRES_USER: 'directus'
+      POSTGRES_PASSWORD: 'directus'
+      POSTGRES_DB: 'directus'
+
+
+  cache:
+    container_name: cache
+    image: redis:6
+    networks:
+      - directus
+
+
+  lbs_adminer:
+    container_name: lbs_adminer
+    image: adminer
+    ports:
+      - 8080:8080
+    depends_on:
+      - sandwich_db
+    networks:
+      - lbs
+
+
+  sandwich_db:
+    container_name: sandwich_db
+    image: mariadb:latest
+    env_file: sandwich_db/.env
+    volumes:
+      - ./sandwich_db/db:/var/lib/mysql
+      - ./sandwich_db/schema.sql:/docker-entrypoint-initdb.d/1.sql
+      - ./sandwich_db/data.sql:/docker-entrypoint-initdb.d/2.sql
+    networks:
+      - lbs
+
+
+  directus:
+    container_name: directus
+    image: directus/directus:latest
+    ports:
+      - 8055:8055
+    volumes:
+      - ./catalogue:/directus/catalogue
+    networks:
+      - directus
+    depends_on:
+      - cache
+      - directus_db
+    environment:
+      KEY: '255d861b-5ea1-5996-9aa3-922530ec40b1'
+      SECRET: '6116487b-cda1-52c2-b5b5-c8022c45e263'
+
+      DB_CLIENT: 'pg'
+      DB_HOST: 'directus_db'
+      DB_PORT: '5432'
+      DB_DATABASE: 'directus'
+      DB_USER: 'directus'
+      DB_PASSWORD: 'directus'
+
+      CACHE_ENABLED: 'true'
+      CACHE_STORE: 'redis'
+      CACHE_REDIS: 'redis://cache:6379'
+
+      ADMIN_EMAIL: 'admin@example.com'
+      ADMIN_PASSWORD: 'admin'
+
+
+networks:
+  lbs:
+    driver: bridge
+  directus:
